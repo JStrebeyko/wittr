@@ -159,9 +159,19 @@ IndexController.prototype._onSocketMessage = function(data) {
 
     var tx = db.transaction('wittrs', 'readwrite');
     var store = tx.objectStore('wittrs');
+    var Indexed = store.index('by-date');
     messages.forEach(function(message) {
       store.put(message);
     });
+    return Indexed.openCursor(null, 'prev');
+  }).then(function(cursor){
+    return cursor.advance(30);
+  }).then(function deletePost(cursor){
+    if (cursor == undefined) return;
+    cursor.delete();
+    return cursor.continue().then(deletePost);
+  });
+
 
     // TODO: keep the newest 30 entries in 'wittrs',
     // but delete the rest.
@@ -169,7 +179,7 @@ IndexController.prototype._onSocketMessage = function(data) {
     // Hint: you can use .openCursor(null, 'prev') to
     // open a cursor that goes through an index/store
     // backwards.
-  });
+
 
   this._postsView.addPosts(messages);
 };
